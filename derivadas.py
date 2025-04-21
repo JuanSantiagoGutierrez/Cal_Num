@@ -1,6 +1,7 @@
 import numpy as np
 import math
 import pandas as pd
+import scipy as sc
 
 def generar_indices(n: int, traslacion:int = 0) -> np.array:
     """Genera un array simétrico de n/2 enteros alrededor de cero incluyendo el 0 \n
@@ -43,7 +44,7 @@ def coef_derivada(matrix: np.ndarray[float], derivada:int =1) -> np.ndarray[floa
     # Resuelve el sistema y lo retorna
     return np.linalg.solve(a=matrix, b=v)
 
-def evaluar_derivada(X:np.ndarray,f:np.ufunc ,x:float=0.0, dx: float = 0.1, traslacion:int = 0) -> float:
+def evaluar_derivada(X:np.ndarray,f:np.ufunc ,x:float=0.0, dx: float = 0.1, traslacion:int = 0, derivada:int = 1) -> float:
     """coef_derivada() -> X \n
     Evalua la derivada en un punto en base a los coeficientes X y a cual derivada se dirije \n
     -> f'(x)"""
@@ -51,7 +52,7 @@ def evaluar_derivada(X:np.ndarray,f:np.ufunc ,x:float=0.0, dx: float = 0.1, tras
     # Usa los coeficientes de X y los índices de los puntos para calcular df, recorriendo ambos arrays en simultaneo. 
     for i,j in zip(X, generar_indices(len(X), traslacion)): 
         df += i * f(x + j * dx )
-    return df / dx
+    return df / math.pow(dx,derivada)
 
 def derivar(x:float,f:np.ufunc,dx:float,derivada: int =1, orden:int = 2, traslacion:int=0)-> float:
     """Deriva una funcion númericamente, usando expansiones de Taylor y orden de Landau"""
@@ -62,23 +63,22 @@ def derivar(x:float,f:np.ufunc,dx:float,derivada: int =1, orden:int = 2, traslac
     X = coef_derivada(matrix=A,derivada=derivada)
     
     # Evaluar la derivada
-    df = evaluar_derivada(X=X, f=f, x=x, dx=dx,traslacion=traslacion)
+    df = evaluar_derivada(X=X, f=f, x=x, dx=dx,traslacion=traslacion, derivada=derivada)
     return df
 
 def extrapolacion_Richarson(D0:float, D1:float, dx0:float, dx1:float, n:int)-> tuple[float]:
-    """Aproximación de Richarson, El orden del error aumenta en n+2"""
-    df = D1 + (D1-D0)/(math.pow((dx0/dx1),n)-1) 
-    err = (D0-D1)/(math.pow(dx1,n)-math.pow(dx0,n))
+    """Aproximación de Richarson, El orden aumenta en e^(n+2)"""
+    df = np.round(D0 + ((D0 - D1)/(math.pow((dx1/dx0),n)-1)),5) 
+    err = abs(np.round((D0-D1)/(math.pow(dx1,n)-math.pow(dx0,n)),5))
     return (df, err)
 
-"""1."""
-def ejer1():
+"""1. Aproxime la derivada primera para cada día con un esquema de orden 2 y un paso de 1 día."""
+def ejer1(DF):
     # Variables
     traslacion = 1
     derivada = 1
     orden = 2
     pasos = 1 # 
-    DF = pd.read_csv("Data/Reporte diario COVID-19.csv")
     def contagios(dia):
         return DF["acumulado"][dia-1]
     L = []
@@ -92,17 +92,17 @@ def ejer1():
                 if dia < len(DF)//2: traslacion+=1 
                 else: traslacion-=1
         L += [df]
-    DF = DF.assign(df1_2_Orden_2_p = L)
+    DF = DF.assign(df_ejer1 = L)
     print(DF.head())
+    return DF
 
-"""2."""
-def ejer2():
+"""2. Aproxime la derivada primera para cada día con un esquema de orden 2 y un paso de 2 días"""
+def ejer2(DF):
     # Variables
     traslacion = 1
     derivada = 1
     orden = 2
     pasos = 2 # 
-    DF = pd.read_csv("Data/TP2_Reporte")
     def contagios(dia):
         return DF["acumulado"][dia-1]
     L = []
@@ -116,36 +116,29 @@ def ejer2():
                 if dia < len(DF)//2: traslacion+=1 
                 else: traslacion-=1
         L += [df]
-    DF = DF.assign(df1_2_Orden_2_p = L)
-    DF.to_csv("Data/TP2_Reporte")
+    DF = DF.assign(df_ejer2 = L)
     print(DF.head())
+    return DF
 
-"""3."""
-def ejer3():
-    # Variables
-    traslacion = 0
-    derivada = 1
-    orden = 4
-    pasos = 1 
-    DF = pd.read_csv("Data/Reporte diario COVID-19.csv")
-    def contagios(dia):
-        return DF["acumulado"][dia-1]
+"""3. Mejore la aproximación usando la extrapolación de Richardson O(dx4)."""
+def ejer3(DF):
+    def D1(dia):
+        return DF["df_ejer1"][dia-1]
+    def D0(dia):
+        return DF["df_ejer2"][dia-1]
     L = []
+    L1= []
     for dia in DF["dia"]:
-        traslacion = 0
-        while True:
-            try:
-                df = derivar(x=dia, f=contagios, dx=pasos, derivada=derivada, orden=orden, traslacion=traslacion)
-                break
-            except:
-                if dia < len(DF)//2: traslacion+=1 
-                else: traslacion-=1
-        L += [df]
+        df = extrapolacion_Richarson(D0=D0(dia), D1=D1(dia), dx0=2, dx1=1, n=2)
+        L += [df[0]]
+        L1 += [df[1]]
     DF = DF.assign(df1_Richarson_4_O = L)
+    DF = DF.assign(df1_Richarson_error = L1)
     print(DF.head())
+    return DF
 
-"""4.""" 
-def ejer4():
+"""4. Determine una fórmula de derivación centrada que sea de orden O(dx⁴).""" 
+def ejer4(DF):
     derivada = 1
     traslacion = 0
     orden = 4
@@ -153,15 +146,15 @@ def ejer4():
     X = coef_derivada(A, derivada=derivada)
     X = np.round(X,5)
     print(f"({X[0]}*f-2 + {X[1]}*f-1+ {X[2]}*f0 + {X[3]}*f1+ {X[4]}*f2)/dx")
+    return DF
     
-"""5."""
-def ejer5():
+"""5. Aproxime la derivada primera para cada día con el esquema de orden 4 y un paso de 1 día."""
+def ejer5(DF):
     # Variables
     traslacion = 0
     derivada = 1
     orden = 4
     pasos = 1 
-    DF = pd.read_csv("Data/Reporte diario COVID-19.csv")
     def contagios(dia):
         return DF["acumulado"][dia-1]
     L = []
@@ -175,24 +168,44 @@ def ejer5():
                 if dia < len(DF)//2: traslacion+=1 
                 else: traslacion-=1
         L += [df]
-    DF = DF.assign(df1_4_Orden_1_p = L)
+    DF = DF.assign(df_ejer5= L)
     print(DF.head())
+    return DF
+
+"""6. Aproxime un polinomio de grado 3 usando los comandos “polyfit()”, “polyout()”, y derívelo
+con “polyder()”."""
+def ejer6(DF):
+    
+    x = DF["dia"].values()
+    y = DF["acumulado"].values()
+    coeffs = sc.polyfit(x, y, 3)
+    dercoeffs = sc.polyder(coeffs)
+    
+    def aprox_fun(x):
+        for i in range(len(coeffs)):
+                        
+    
+    return dercoeffs ,coeffs
 
 if __name__ == "__main__":
-    #ejer1()
-    #ejer2()
-    #ejer3()
-    ejer4()
+    DF = pd.read_csv("Data/Reporte diario COVID-19.csv")
+    #DF = ejer1(DF)
+    #DF = ejer2(DF)
+    #DF = ejer3(DF)
+    #DF = ejer4(DF)
+    #DF = ejer5(DF)
+    aprox_dfun, aprox_fun = ejer6(DF)
     
+    #DF.to_csv("Data/Reporte_edit.csv")
 
-    """
+    
     import matplotlib.pyplot as plt
     plt.figure(figsize=(8,6))
-    plt.plot(DF["dia"], DF["acumulado"])
+    plt.plot(DF["dia"], DF["df1_Richarson_4_O"], color="red", label="Richarson_12d4°")
+    plt.plot(DF["dia"], DF["df1_Richarson_error"], color="blue", label="error")
+    plt.plot(DF["dia"], DF["df_ejer5"], label= "aprox_1d4°", color="green")
+    #plt.plot(DF["dia"], DF["df_ejer1"], label= "aprox_1d2°", color="green")
+    #plt.plot(DF["dia"], DF["df_ejer2"], label= "aprox_2d2°")
+    plt.legend()
+
     plt.savefig("graf_acumulado.png")
-    plt.figure(figsize=(8,6))
-    plt.plot(DF["dia"], DF["nuevo"])
-    plt.savefig("graf_nuevos.png")
-    plt.figure(figsize=(8,6))
-    plt.plot(DF["dia"], L)
-    plt.savefig("graf_L.png")"""
