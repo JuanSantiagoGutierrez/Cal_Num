@@ -1,7 +1,6 @@
 import numpy as np
 import math
 import pandas as pd
-import matplotlib.pyplot as plt
 
 def generar_indices(n: int, traslacion:int = 0) -> np.array:
     """Genera un array simétrico de n/2 enteros alrededor de cero incluyendo el 0 \n
@@ -57,7 +56,7 @@ def evaluar_derivada(X:np.ndarray,f:np.ufunc ,x:float=0.0, dx: float = 0.1, tras
 def derivar(x:float,f:np.ufunc,dx:float,derivada: int =1, orden:int = 2, traslacion:int=0)-> float:
     """Deriva una funcion númericamente, usando expansiones de Taylor y orden de Landau"""
     # Calcular la matrix, por defecto da la 1er derivada
-    A = gen_matrix(derivada=derivada,truncamiento=orden,traslacion= t)
+    A = gen_matrix(derivada=derivada,truncamiento=orden,traslacion= traslacion)
    
     # Calcular los coeficientes
     X = coef_derivada(matrix=A,derivada=derivada)
@@ -66,31 +65,127 @@ def derivar(x:float,f:np.ufunc,dx:float,derivada: int =1, orden:int = 2, traslac
     df = evaluar_derivada(X=X, f=f, x=x, dx=dx,traslacion=traslacion)
     return df
 
-if __name__ == "__main__":
+def extrapolacion_Richarson(D0:float, D1:float, dx0:float, dx1:float, n:int)-> tuple[float]:
+    """Aproximación de Richarson, El orden del error aumenta en n+2"""
+    df = D1 + (D1-D0)/(math.pow((dx0/dx1),n)-1) 
+    err = (D0-D1)/(math.pow(dx1,n)-math.pow(dx0,n))
+    return (df, err)
+
+"""1."""
+def ejer1():
     # Variables
-    t = 1
+    traslacion = 1
     derivada = 1
     orden = 2
-    dx = 2
-    DF = pd.read_csv("TPs/Reporte diario COVID-19.csv")
+    pasos = 1 # 
+    DF = pd.read_csv("Data/Reporte diario COVID-19.csv")
     def contagios(dia):
-        """contagios(dia)""" # Aclarar la funcion para la documentación
         return DF["acumulado"][dia-1]
     L = []
     for dia in DF["dia"]:
-        t = 0
+        traslacion = 0
         while True:
             try:
-                df = derivar(x=dia, f=contagios, dx=dx, derivada=derivada, orden=orden, traslacion=t)
+                df = derivar(x=dia, f=contagios, dx=pasos, derivada=derivada, orden=orden, traslacion=traslacion)
                 break
             except:
-                if dia < len(DF)//2: t+=1 
-                else: t-=1
+                if dia < len(DF)//2: traslacion+=1 
+                else: traslacion-=1
         L += [df]
     DF = DF.assign(df1_2_Orden_2_p = L)
-    DF.to_csv("Reporte_1.csv")
+    print(DF.head())
+
+"""2."""
+def ejer2():
+    # Variables
+    traslacion = 1
+    derivada = 1
+    orden = 2
+    pasos = 2 # 
+    DF = pd.read_csv("Data/TP2_Reporte")
+    def contagios(dia):
+        return DF["acumulado"][dia-1]
+    L = []
+    for dia in DF["dia"]:
+        traslacion = 0
+        while True:
+            try:
+                df = derivar(x=dia, f=contagios, dx=pasos, derivada=derivada, orden=orden, traslacion=traslacion)
+                break
+            except:
+                if dia < len(DF)//2: traslacion+=1 
+                else: traslacion-=1
+        L += [df]
+    DF = DF.assign(df1_2_Orden_2_p = L)
+    DF.to_csv("Data/TP2_Reporte")
+    print(DF.head())
+
+"""3."""
+def ejer3():
+    # Variables
+    traslacion = 0
+    derivada = 1
+    orden = 4
+    pasos = 1 
+    DF = pd.read_csv("Data/Reporte diario COVID-19.csv")
+    def contagios(dia):
+        return DF["acumulado"][dia-1]
+    L = []
+    for dia in DF["dia"]:
+        traslacion = 0
+        while True:
+            try:
+                df = derivar(x=dia, f=contagios, dx=pasos, derivada=derivada, orden=orden, traslacion=traslacion)
+                break
+            except:
+                if dia < len(DF)//2: traslacion+=1 
+                else: traslacion-=1
+        L += [df]
+    DF = DF.assign(df1_Richarson_4_O = L)
+    print(DF.head())
+
+"""4.""" 
+def ejer4():
+    derivada = 1
+    traslacion = 0
+    orden = 4
+    A = gen_matrix(derivada=derivada, truncamiento=orden, traslacion=traslacion)
+    X = coef_derivada(A, derivada=derivada)
+    X = np.round(X,5)
+    print(f"({X[0]}*f-2 + {X[1]}*f-1+ {X[2]}*f0 + {X[3]}*f1+ {X[4]}*f2)/dx")
     
+"""5."""
+def ejer5():
+    # Variables
+    traslacion = 0
+    derivada = 1
+    orden = 4
+    pasos = 1 
+    DF = pd.read_csv("Data/Reporte diario COVID-19.csv")
+    def contagios(dia):
+        return DF["acumulado"][dia-1]
+    L = []
+    for dia in DF["dia"]:
+        traslacion = 0
+        while True:
+            try:
+                df = derivar(x=dia, f=contagios, dx=pasos, derivada=derivada, orden=orden, traslacion=traslacion)
+                break
+            except:
+                if dia < len(DF)//2: traslacion+=1 
+                else: traslacion-=1
+        L += [df]
+    DF = DF.assign(df1_4_Orden_1_p = L)
+    print(DF.head())
+
+if __name__ == "__main__":
+    #ejer1()
+    #ejer2()
+    #ejer3()
+    ejer4()
     
+
+    """
     import matplotlib.pyplot as plt
     plt.figure(figsize=(8,6))
     plt.plot(DF["dia"], DF["acumulado"])
@@ -100,4 +195,4 @@ if __name__ == "__main__":
     plt.savefig("graf_nuevos.png")
     plt.figure(figsize=(8,6))
     plt.plot(DF["dia"], L)
-    plt.savefig("graf_L.png")
+    plt.savefig("graf_L.png")"""
