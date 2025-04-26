@@ -184,7 +184,6 @@ def ejer6(DF):
     def aprox_fun(x):
         for i in range(len(coeffs)):
                         
-    
     return dercoeffs ,coeffs
 
 if __name__ == "__main__":
