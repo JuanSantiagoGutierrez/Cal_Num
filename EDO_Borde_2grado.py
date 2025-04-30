@@ -48,8 +48,36 @@ class EDO_Borde_2grado():
             
 if __name__ == "__main__":
     
+    def Vibrar(k,modo = 0, intervalo = (0,1),particiones = 100, borde = (0,0)):
+        espacio = np.linspace(intervalo[0], intervalo[1], particiones)
+        A = np.zeros((len(espacio)-2,len(espacio)-2))
+        for i in range(0,len(A)):
+            A[i][i] = -2 * k
+            try:
+                A[i][i-1] = 1
+                A[i][i+1] = 1
+            except IndexError:
+                pass 
+        A[0][-1] = 0
+        autovalores, autovectores = np.linalg.eig(A)
+        print("autovalor", autovalores[modo])
+        Y = [borde[0]]
+        v = autovectores
+        for i in v:
+            Y.append(i[modo])
+        Y.append(borde[1])
+        return espacio, Y
     
-    EDO = EDO_Borde_2grado(coef_a=1,coef_c=100/125,coef_b=0,particiones=30,intervalo=(0,10), borde=(2,-2))
-    EDO.generar_matriz_vector()
-    EDO.resolver_EDO()
-    EDO.presentar_solucion()
+    import matplotlib.pyplot as plt
+    
+    
+    plt.figure(figsize=(8,6))
+    
+    for i in range(3,6):
+        x,y = Vibrar(6, i)
+        plt.plot(x,y)
+    
+    plt.savefig("Resultados/EDO---")
+    
+        
+        
