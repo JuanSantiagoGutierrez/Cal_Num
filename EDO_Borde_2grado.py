@@ -74,7 +74,7 @@ if __name__ == "__main__":
     plt.figure(figsize=(8,6))
     
     for i in range(3,6):
-        x,y = Vibrar(6, i)
+        x,y = Vibrar(k = 6,modo = i)
         plt.plot(x,y)
     
     plt.savefig("Resultados/EDO---")
