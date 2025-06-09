@@ -49,11 +49,6 @@ class EDO():
             f1 = f0 + self.dx*(dfdx+dfdx_ev) / 2
         DF.to_csv(f"Resultados/{csv_name}")
         return DF
-            
-            
-            
-            
-
 
 def dfdx(x0, dx, f0):
     return -2*(x0**3) + 12*(x0**2) -20*x0 + 8.5
